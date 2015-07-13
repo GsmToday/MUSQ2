@@ -1,0 +1,182 @@
+\documentclass[10pt, conference, compsocconf]{IEEEtran}
+\usepackage{ifpdf}
+\usepackage{cite}
+\usepackage[pdftex]{graphicx}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor,stfloats}
+\usepackage{graphicx}
+\usepackage{xcolor,stfloats}
+\usepackage{amsthm}
+    \newtheorem{myDef}{Definition}
+    \newtheorem{lemma}{Lemma}
+\usepackage{lipsum}
+\usepackage{lipsum}
+\usepackage{stfloats}
+\usepackage[cmex10]{amsmath}
+\usepackage{amssymb}
+\usepackage[colorlinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{mdwmath}
+\usepackage{mdwtab}
+\usepackage{eqparbox}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{epsfig}
+\DeclareMathOperator*{\argmin}{argmin}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+\usepackage{algorithmic}
+\usepackage{array}
+\usepackage{mdwmath}
+\usepackage{mdwtab}
+\usepackage{eqparbox}
+\usepackage[tight,footnotesize]{subfigure}
+\usepackage{stfloats}
+\usepackage{url}
+\usepackage{multirow}
+
+
+\begin{document}
+
+\title{Draft}
+
+% \author{
+% \IEEEauthorblockN{Yong Wang\IEEEauthorrefmark{1},
+% Shimeng Gao\IEEEauthorrefmark{1},
+% Junhao Zhang\IEEEauthorrefmark{1},
+% Xiao Nie\IEEEauthorrefmark{1}}
+% \IEEEauthorblockA{\IEEEauthorrefmark{1}School of Computer Science and Engineering,
+% University of Electronic Science and Technology of China \\
+% Chengdu, China 611731\\
+% Email: cla@uestc.edu.cn}
+% }
+
+\maketitle
+
+% \begin{abstract}
+% ...
+% \end{abstract}
+
+% \begin{IEEEkeywords}
+% Query authentication, Spatial query, Data outsourcing   
+% \end{IEEEkeywords}
+% \IEEEpeerreviewmaketitle
+
+\section{Overview}\label{overview}
+
+A Multiple User-defined Spatial Query (MUSQ) can be formulated as $\mathcal{Q} = \{\mathcal{U}, \mathcal{W}, \mathcal{P}, k\}$, where $\mathcal{U} = \{u_0, u_1, \ldots, u_{n-1}\}$ is the set of querying users, $\mathcal{P} = \{p_0, p_1, \ldots, p_s\}$ is the set of POIs. $\mathcal{W} = \{w_0, w_1, \ldots, w_{n-1}\}$ is the set of user-defined preferences. Each $w_i = \langle w_{i0}, w_{i1}, \ldots, w_{i,m} \rangle, (0 \leq i < n)$ is an $m + 1$ dimensional vector that represents $u_i$'s defined weights for the spatial ($w_{i0}$) and non-spatial ($w_{i1}, \ldots, w_{i,m}$) attributes of POIs. We will use weight and preference interchangeably. Note that the sum of all elements in the vector $w_i$ satisfies $w_{i0} + w_{i1} + \ldots + w_{i,m} = 1$. When querying users consider no preference on the attributes, $\mathcal{W} = \emptyset$. The MUSQ querying results $\mathcal{R}$ is the subset of $\mathcal{P}$, $\mathcal{R} \subseteq \mathcal{P}$, and $\|\mathcal{R}\| = k$. 
+
+In the above scenario of MUSQ, users need to provide their preferences in the form of $\mathcal{W} = \{w_0, w_1, \ldots, w_{n-1}\}$. However, it may not be easy for common users to precisely define their preference as weights on all criteria. It would be more friendly for users if there is an easier way to express their preferences. Therefore, in this paper, we provide authentic user-friendly methods for users to express their preferences as a complement for MUSQ.
+
+It's common that users have different backgrounds, which leads to a variety of ways on expressing their favorites. One of the ways is representative example, which simply choose an exact alternative POI, whose attributes can be the representation of the preference. Other ways include ordered list, etc. All these ways are more user-friendly compared to the original one, which requires users to directly provide exact weights on all the criteria.
+
+However, to process MUSQ, a uniform expression of preference is still needed, which is the weight matrix $\mathcal{W}$. In the following sections, we design authentic transformation methods to translate different users' preference into weight matrix $\mathcal{W}$. 
+
+\subsection{Transformation of Multiple Representations into Weight Matrix}
+
+In this subsection, we present the transformation methods of the aforementioned multiple representations into weight matrix.
+
+\subsubsection{Representative Example into Weight Matrix}
+
+...
+
+\subsubsection{Other Types of Preferences into Weight Matrix}
+
+...
+
+\subsection{Authentication Problems}
+
+\subsubsection{Authentication Problems of Transformation}
+
+As the transformation process is executed by the service provider (SP), users need to verify that the process is executed authentically, i.e., the result weight matrix is computed . This can be done by using verifiable computation. (?)
+
+...
+
+\subsection{Authentication Problems of MUSQ}
+
+The queries $\mathcal{Q}$ are executed by the service provider (SP) on the POI set $\mathcal{P}$, which is authorized and signed by the data owner (DO). Users need to verify the returned result $\mathcal{R}$. The authentication problem is for querying users to verify that the SP executes all queries credibly in terms of three authenticity condition: (1) \emph{soundness}: the returned result set $\mathcal{R}$ is the genuine MUSQ result and has not been tampered with; (2) \emph{completeness}: no genuine MUSQ results are missing; (3) \emph{correctness}: Each POI in the result set $\mathcal{R}$ satisfies all users' preferences.
+
+Thus, the authentication of MUSQ involves three correlated issues: (1) ADS design and signature generation by DO; (2) online query processing and VO construction for each user by SP; (3) result verification based on the received VO and signatures by all querying users.
+
+
+\section{MUSQ Processing and Authentication}\label{MUSQProcessingAndAuthentiaction}
+
+\subsection{Design of Authenticated Data Structure}
+
+We use an MR-tree to index POIs for MUSQ processing and authentication. DO groups the POIs in  $\mathcal{P}$ by their spatial attributes (latitude and longitude). Each group is called as a minimum bounding rectangle (MBR), which is indexed as a leaf node of an MR-tree attached with a corresponding digest. The digest is calculated as:
+\begin{equation*}
+    h = hash(p_1 | p_2 | \cdots | p_t)
+\end{equation*}
+where $hash(\cdot)$ is a one-way cryptographic hash function such as SHA-1 \cite{SHA1}, ``$|$'' is a concatenation operator, and $p_i$ is the $i$-th POI in the MBR. Each internal node is a larger MBR containing child MBRs, their pointers as well as its digest. The digest of an internal node is computed as:
+\begin{equation*}
+    h = hash(MBR_1 | h_1 | MBR_2 | h_2 | \cdots | MBR_n | h_n)
+\end{equation*}
+where $MBR_i$ is the $i$-th child MBR and $h_i$ is the corresponding digest summarizing child nodes' MBRs and their digests. Recursively, an MR-tree is constructed from leaf to root. Only the root node is signed by DO as $Sig(h_{root})$ using its private key.
+
+Fig. \ref{VoMR} shows an MR-tree built from the POIs in Fig. \ref{query}. The leaf entry $e_3$ stores the MBR $N_1$, the pointer to POIs $p_1, p_4$ in $N_1$, and the digest derived from $p_1, p_4$ as $h(e_3) = hash(p_1|p_4)$. The internal entry $e_1$ stores the MBR $N_3$, the pointer to the child MBRs $N_1, N_2$, and the digest derived from $N_1, N_2$ as $h(e_1) = hash(N_1 | h(e_3) | N_2 | h(e_4))$. The root node digest is $h(e_{root}) = hash(N_3 | h(e_1) | N_6 | h(e_2))$. The root signature is generated by signing the digest of the root node $e_{root}$ using the DO's private key.
+
+
+
+
+\subsection{Query Processing and VO Construction}\label{processing}
+
+As discussed above, an MUSQ $\mathcal{Q}(\mathcal{U}, \mathcal{W}, \mathcal{P}, k)$ retrieves a result set $\mathcal{R}$ containing $k$ POIs that are not dominated or weighted-dominated by any other POIs in $\mathcal{P}$ w.r.t. the querying user set $\mathcal{U}$.
+
+Initially, the result set $\mathcal{R}$ and verification object $VO$ are empty. SP computes an additional value $v_{sum}$ for each node $N$ of the MR-tree and each POI object $p$ in the leaf node. $v_{sum}$ will be used to determine the traversal sequence of the MR-tree. For a POI object $p$ in the leaf node, $v_{sum}(p)$ is computed based on $\mathcal{U}$ and $\mathcal{W}$ as:
+\begin{equation*}
+    v_{sum}(p) = ad_{sum}(p) + \diamondsuit(p)
+\end{equation*}
+where $ad_{sum}(p)$ is the weighted sum of spatial attribute and $\diamondsuit(p)$ is the weighted sum of non-spatial attributes.
+For a node $N$ of the MR-tree which represents an MBR, $v_{sum}(N)$ is computed as:
+\begin{equation*}
+    v_{sum}(N) = \min_{p_i \in N}(ad_{sum}(N.p_i)) + \min_{p_j \in N}(\diamondsuit(N.p_j))
+\end{equation*}
+where $N.p_i, N.p_j$ is a POI covered by the MBR $N$ respectively, $\min_{p_i \in N}(ad_{sum}(N.p_i))$ and $\min_{p_j \in N}(\diamondsuit(N.p_j))$ represents the minimum value among all the corresponding values of the POIs contained by $N$ respectively. 
+
+Before presenting our detailed algorithm, we introduce two lemmas from \cite{papadias2003optimal}.
+
+\begin{lemma}\label{Lemma1}
+    Given a querying user set $\mathcal{U}$, if a POI $p$ dominates or weighted-dominates another POI $p'$, we must have $v_{sum}(p) < v_{sum}(p')$; if a POI $p$ dominates or weighted-dominates a region $S$, we must have $v_{sum}(p)<v_{sum}(\mathcal{S})$
+\end{lemma}
+
+\begin{lemma}\label{Lemma2}
+    Any POI added to a candidate result set based on a traversal MR-Tree in ascending order of $v_{sum}$ of POIs is guaranteed to be a final result set.
+\end{lemma}
+
+Based on Lemma \ref{Lemma2}, only a single traversal of the MR-Tree is needed to obtain the final result set $\mathcal{R}$. The computed $v_{sum}$ is used to determine the traversal sequence of the MR-tree. To achieve this, SP maintains a min heap $\mathcal{H}$ to keep the index nodes that is to be scanned with the ascending order of $v_{sum}$. The root node of MR-tree is added to $\mathcal{H}$ and $VO$ at first. For each step, the top of $\mathcal{H}$ pops up, either $\mathcal{R}$ or $VO$ will be expanded. SP examines whether the popped entry of $\mathcal{H}$ is dominated or weighted-dominated by any existing objects in $\mathcal{R}$. If it is, the corresponding node or object is added into $VO$. Otherwise, (1) if it's an internal node of MR-tree, its child nodes will be added into $\mathcal{H}$; (2) if it's a leaf node, all the POI objects covered by the node will be added into $\mathcal{H}$; (3) if it's a POI object, it will be added directly into $\mathcal{R}$. In some special cases where $\mathcal{W}$ is not defined by users, SP only needs to examine the dominance relationships during the process. The process ends when $\mathcal{H}$ is empty.
+
+After the process, SP compares the number of POIs in $\mathcal{R}$ (denoted as $\|\mathcal{R}\|$) with the user-defined parameter $k$. If $\|\mathcal{R}\| > k$, SP sorts the POIs by their values of $v_{sum}$ and marks the top-$k$ POIs as the final result, then adds the rest into $VO$. If $\|\mathcal{R}\| = k$, SP directly returns $\mathcal{R}$ as the final result. 
+
+If $\|\mathcal{R}\| < k$, a second round query is needed. SP recomputes the $v_{sum}$ of the nodes in MR-tree and POIs in leaf nodes while the POIs in the current $\mathcal{R}$ are omitted. Then, SP executes the same traversal process and gets the results of the second round. This process continues until $\|\mathcal{R}\| \geq k$. The result objects of each round along with their $VO$ are grouped and ranked by their round sequence for further authentication. 
+
+It's worth noting that, $k$ is an optional parameter. If it's not defined by $\mathcal{U}$, SP should return all the calculated result objects of the first round in $\mathcal{R}$.
+
+The final VO contains 3 types of data: (1) the POI objects, (2) the MBRs along with theirs digests, and (3) all users' query information $\mathcal{U}$ and $\mathcal{W}$.
+
+Algorithm \ref{Algorithm1} illustrates the query processing and VO construction. Step (1) initiates the original result set $\mathcal{R}$ and VO; step (3) to (10) initiates the query process for each round; step (11) to (25) iterates the MR-tree and find the result set $G_i$ for round $i$ which does not contain any dominance or weighted dominance relationship; step (27) to (30) further sorts and prunes $\mathcal{R}$; and step (31) to (33) return $\mathcal{R}$ and VO to querying users.
+
+Fig. \ref{MR-TreeExample} shows the MR-tree hierarchical structure of the POIs in Fig. \ref{VoMR}. For each node, its $v_{sum}$ value is marked on the right side of the colon. Assume the user requested POI number $k = 4$. When running Algorithm \ref{Algorithm1}, the data structure we use, including the min-heap $\mathcal{H}$ and result set $\mathcal{R}$, will be changed step by step as shown in Table \ref{ChangesoftheDataStructures}. Further, $VO$ will be gradually expanded during the query process. In the beginning, the top element $e_{root}$ is popped from the heap $\mathcal{H}$. All top elements are internal nodes until step (5). At step (5), $p_4$ is popped from $\mathcal{H}$ and becomes the first result point. At step (6), as $e_4$ is dominated by $p_4$, it should be pruned. Hence, we insert $e_4$ into $VO$. Next, $p_1$ and $p_2$ are popped from $\mathcal{H}$. The result set is updated to $\{p_4,p_1,p_2\}$ (step (7) and step (8)). Then, $p_0$ and $p_3$ are popped from $\mathcal{H}$. As $p_0$ is dominated by $p_1, p_2$ plus $p_3$ is dominated by $p_2$, we insert them into $VO$. Similarly, $e_6$ is dominated by $p_2$. We also insert it into $VO$. Finally, we get the query result $R= \{p_1,p_4,p_2\}$ and the verification object $VO = \{e_4,p_0,p_3,e_6\}$.
+
+
+\subsection{Query Authentication}\label{authentication}
+
+When users receive the result set $\mathcal{R}$ along with the verification object $VO$, each of them authenticates the result by verifying its soundness, completeness, and correctness as follows.
+
+First, each user computes the digest of the root node based on $VO$, and compares the computed digest with the original one signed by the data owner. If it is the same, the soundness of $R$ is guaranteed.
+
+Then, he/she checks whether the number of POIs in $R$ equals user requested POI number $k$. After that, for each result group $G_i$ in $\mathcal{R}$ and corresponding $VO_i$, he/she verifies the correctness of $G_i$ by examining the internal dominance/weighted dominance relationships among the POIs in $G_i$. If they are not dominated/weighted-dominated by each other, the correctness of $G_i$ is guaranteed. Next, he/she verifies whether all the POIs/MBRs in $VO_i$ are dominated/weighted-dominated by any POIs in $G_i$. If all of them are dominated/weighted-dominated by some POIs in $G_i$, the completeness of $G_i$ is guaranteed. However, if there exists POIs in $VO_i$ that are not dominated/weighted-dominated by $G_i$ but have worse values of $v_{sum}$ than all the POIs in $G_i$, the completeness of $G_i$ is also guaranteed. (This happens when the original result of the last group has more POIs than what he/she actually needs.) Further, he/she verifies whether POIs in the higher ranked groups dominate/weighted-dominate those in the lower ranked ones. This guarantees the correctness of the whole result set $\mathcal{R}$.
+
+
+% \bibliographystyle{abbrv}
+% \bibliography{references}
+
+
+\end{document}

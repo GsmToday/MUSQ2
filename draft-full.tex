@@ -1,0 +1,666 @@
+\documentclass[10pt, conference, compsocconf]{IEEEtran}
+\usepackage{ifpdf}
+\usepackage{cite}
+\usepackage[pdftex]{graphicx}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{xcolor,stfloats}
+\usepackage{graphicx}
+\usepackage{xcolor,stfloats}
+\usepackage{amsthm}
+    \newtheorem{myDef}{Definition}
+    \newtheorem{lemma}{Lemma}
+\usepackage{lipsum}
+\usepackage{lipsum}
+\usepackage{stfloats}
+\usepackage[cmex10]{amsmath}
+\usepackage{amssymb}
+\usepackage[colorlinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{mdwmath}
+\usepackage{mdwtab}
+\usepackage{eqparbox}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{epsfig}
+\DeclareMathOperator*{\argmin}{argmin}
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
+\usepackage{algorithmic}
+\usepackage{array}
+\usepackage{mdwmath}
+\usepackage{mdwtab}
+\usepackage{eqparbox}
+\usepackage[tight,footnotesize]{subfigure}
+\usepackage{stfloats}
+\usepackage{url}
+\usepackage{multirow}
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\begin{document}
+
+\title{Authenticating Multiple User-Defined \\ Spatial Queries}
+
+%\author{
+%\IEEEauthorblockN{
+ %   Yong Wang\IEEEauthorrefmark{1},
+ %   Shimeng Gao\IEEEauthorrefmark{1},
+ %   Junhao Zhang\IEEEauthorrefmark{1},
+ %   Xiao Nie\IEEEauthorrefmark{1}}
+%\IEEEauthorblockA{
+%    \IEEEauthorrefmark{1}School of Computer Science and Engineering, University of Electronic Science and Technology of China \\
+%    Chengdu, China 611731\\
+%    Email: cla@uestc.edu.cn}
+%}
+
+\maketitle
+
+\begin{abstract}
+%In data outsourcing scenarios, the data owner forwards its data to service providers to offer various kind of services for users, enabling users to access and query the data more efficiently. As SP may be untrusted, users need to authenticate the soundness, correctness and completeness of query results.
+Multiple user decision making is important in today's location-based service scenarios. Existing query services such as \textit{k}NN and Skyline queries only consider single user and do not consider user's preferences. 
+In this paper, we introduce a novel query type called multiple user-defined spatial queries (MUSQ), which return the best answers for a group of users considering both their locations and preferences. We design an authenticated query processing framework based on MR-tree. Comprehensive experiments are conducted to evaluate the proposed methods. The results show the effectiveness and robustness of out methods under various parameter settings.
+%multi user decision making important.
+%current method cannot solve
+\end{abstract}
+
+\begin{IEEEkeywords}
+Query authentication, Spatial query, Data outsourcing	
+\end{IEEEkeywords}
+\IEEEpeerreviewmaketitle
+
+
+\section{Introduction}\label{intro}
+
+With the popularity of Location-Based Services (LBSs), a large volume of spatial data have been collected and owned by organizations, corporations or even individuals, which are called as \emph{data owners} (DOs). Managing such overwhelming volume of spatial data raises big challenges for data owners both technically and financially. Instead of building their own technical teams and infrastructures, DOs alternatively outsource their data to a third party, which is specialized in data management and query processing. By relieving DOs from heavy daily responsibilities of data management, data outsourcing has the potential to provide efficient and cost effective services.
+
+In the data outsourcing scenario, a data owner delegates its data to a service provider (SP), which indexes the data and answer users' queries. In the rest of this paper, we will use the terms cloud, service provider and server interchangeably. As the server is beyond the administrative domain of a data owner, it may intentionally manipulate query results for its own benefits. Therefore, a user needs to be assured that query results satisfy the conditions of: \emph{soundness} (i.e., every data item in the results comes from the original database and is not tampered with by SP); \emph{correctness} (i.e., every data item in the results satisfies users' query criteria), and \emph{completeness} (i.e., every data item in the original database that satisfies the query criteria is included in the results). This problem is known as \emph{authenticated query processing} \cite{SIGMOD2005,ICDE2004}.
+
+Fig. \ref{framework} shows the authenticated query processing framework under data outsourcing scenarios. A data owner builds and signs an authenticated data structure (ADS) for his/her dataset, when he/she delegating it to a SP. The SP processes a user's query by returning the corresponding results and a verifying object (VO). When receiving these information, the user reconstructs querying results proof, and verifies their soundness, correctness, and completeness with the published data owner's signature.
+
+There has been a various set of literature on authenticated query processing, such as the authenticating algorithms for \emph{k}-Nearest Neighbors query (\emph{k}NN) \cite{ICDE2011} and its variant \cite{li2015authentication}, the skyline query \cite{lin2011authentication, lin2014authenticating}, and \emph{k}-Aggregated Nearest Neighbors (\emph{k}ANN) query \cite{hu2013spatial}, etc. These methods can hardly be applied into multiple users decision making scenarios, under which users form a group and query for the best answers according to their locations and preferences. We name it as Multiple User-defined Spatial Query (MUSQ).
+
+As a typical example of MUSQ, Alice and Bob query for the best dinner place considering the distance, customers' ratings and prices. Each has his/her own preference about these attributes. That is, Alice prefers distance most but does not care about prices or customer ratings; Bob prefers prices and customers' ratings more than the distance. The server needs to calculate their preferences and retrieve the best dinner place satisfying both of their requirements. A real application relevant to MUSQs is Baidu JuJu\footnote{juju.baidu.com}, invented by Baidu company. It allows users to share their own locations and continuously browse their friends' real-time locations with respect to a predetermined meeting time. As a highlight of the feature, Baidu JUJU makes a recommendation about the meeting spot for the user group based on their locations. However, it takes no consideration about the non-spatial attributes and users' needs of POIs. By using MUSQs in this scenario, different users' requirements can be satisfied and the meeting spot can be selected accurately.
+ 
+By allowing multiple users to define their own preferences, MUSQ has more flexibility. The query results are affected by spatial/non-spatial attributes as well as users' specified preferences. Typically, \emph{k}NN, \emph{k}ANN, and skyline can be treated as its special query cases. Hence, a new authentication method needs to be designed to support its dynamism and generality. However, no existing work has considered authenticated processing of such queries.
+
+In this paper, we aim to design an authenticated processing framework of MUSQ. Our contributions include (among others) solutions to these challenges:
+
+(1) We identify the problem of MUSQs and propose a query processing method that considers both multiple users' preferences priority as well as spatial/non-spatial attributes of Point-of-Interests (POIs).
+
+(2) We propose a MR-tree based method for authenticated MUSQs.
+This problem is critical for Geographical Information Systems, urban planning and environment applications. To the best of our knowledge, this is the first work that addresses multiple user-defined spatial query authentication for location-based services.
+
+(3) We conduct a comprehensive set of experiments to evaluate the performance of our proposed methods and algorithms. The results show that our methods and algorithms perform well under various system settings.
+
+The rest of this paper is organized as follows. The research background and related works are shown in Section \ref{related_work}. Our system model and preliminaries are presented in Section \ref{problem_formulation}. The detailed query processing and authentication scheme are shown in Section \ref{basic}. The experiments are shown in Section \ref{evaluation}. Finally, we draw brief conclusions in Section \ref{conclusion}.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/Fig_1.jpg}
+	\caption{The framework of data outsourcing scenarios}\label{framework}
+\end{figure}
+
+
+\section{Related Work}\label{related_work}
+
+There are plenty of works on authenticated query processing. These works are based on either digital signature chaining or Merkle hash tree.
+
+Digital signature is an asymmetric cryptography based scheme for proofing the authenticity of a digital message. The signer generates a secret and public key pair $(SK, PK)$, then signs his message $x$ with the secret key $SK$, and publishes the signed message $sig(x,SK)$ with the public key $PK$. The receiver can use the public key $PK$ and the signature to verify the authenticity of the message. Early works, such as VB-tree \cite{ICDE2004}, imposed this scheme for data authentication. However, simply signing each data item cannot guarantee the completeness, because users cannot verify whether some of the results is missed. Therefore, digital signature chaining \cite{SIGMOD2005} was proposed. It signs on adjacent data values to guarantee the completeness. The signature of each value depends both on its own value and its immediate neighbor values. Based on their work, Cheng et al. \cite{DBSEC2006} extended the signature chaining to multi-dimensional space with the assumption that the data in the multi-dimensional space is split into partitions. It was done by ordering the points within the partition, and constructing the signature chaining. With the property that the update of signature chaining only affects the node itself and its left and right neighbors, Pang et al. \cite{VLDB2009} proposed a signature aggregation protocol for checking the soundness, completeness and freshness of query answers.
+
+Merkle hash tree (MHT) \cite{CRYPTO1989} is an effective authenticated data structure (ADS) to authenticate a large set of data values. MHT is a binary tree that data is stored with its leaf node. As shown in Fig. \ref{MHTexample}, each leaf node has a digest generated by one-way hash function $H(\cdot)$. Each internal node has a digest of the concatenation of its children's digest, e.g., $h_{11}=H(h_{21}|h_{22})$. Only the digest value of root is signed by the data owner. An MHT can be used to authenticate any subset of data values. For example in Fig. \ref{MHTexample}, the server sends $x_1$ and $x_2$ as query results to the user. As a proof of the results, the \emph{VO} sent by the server includes the digest of $N_{12}$ and the signed root digest $s_{\emph{root}}$. The user computes $h_{21}=H(x_1)$, $h_{22}=H(x_2)$, $h_{11}=H(h_{21}|h_{22})$, and finally $h_{\emph{root}}=H(h_{11}|h_{12})$. Then he/she compares the re-constructed $h_{\emph{root}}$ with the received $s_{\emph{root}}$ in the \emph{VO}. If they are the same, the user can assure that $x_1$ and $x_2$ are legitimate.
+
+\begin{figure}[H]
+	\centering
+	% The figure needs to re-drawer fitting with the scripture, file name is fig2
+	\includegraphics[width=3.2in]{figure/Fig_2.jpg}
+	\caption{An Example of Merkle Hash Tree}\label{MHTexample}
+\end{figure}
+
+MHT has been widely adapted to various index structures, Li et al. \cite{SIGMOD2006} proposed an authenticated structure called Merkle B-tree (MB-tree) handling dynamic scenarios, where data owners periodically update the data residing at the servers. Yang et al. \cite{VLDB2009b,ICDE2008} first proposed MR-tree for multi-dimensional query authentication. MR-tree combines the concepts from MB- and R*-trees \cite{beckmann1990r}. It is a disk-based adaptation of the MHT, which can efficiently authenticate spatial queries such as range query and skyline query. For more complex query types, Yiu et al. \cite{ICDE2011} extended MHT for moving \emph{k}-nearest-neighbor (\emph{k}NN) queries, and Li et al. \cite{TISSEC2010} designed MHT based authentication scheme for aggregation queries. Preserving location privacy in query authentication, Chen et al. \cite{chen2014authenticating} design query processing framework for top-\emph{k} queries based on R-tree and Power Diagram indexes. To authenticate location-based skyline queries, Lin et al. \cite{lin2011authentication, lin2014authenticating} proposed a MR-Sky-tree and its advanced form Partial-S4-Tree. Their authenticated data structures index the skyline scope of spatial objects instead of the object itself, which reduce the high VO size and VO construction time of traditional MR-tree methods. Different from the above queries returning query results to a single user, \cite{papadias2005aggregate} attempts to search a POI that minimize total distance between a POI and a group of query users and name it as \emph{k}-aggregated nearest neighbor (\emph{k}ANN) queries. \cite{hu2013spatial} introduced an ADS called VN-Auth based on the Voronoi diagram of the spatial dataset and verify the soundness and completeness of \emph{k}ANN queries.
+
+These works can hardly be applied into authenticated MUSQ processing, which is virtually a multi-criterion query for a group of users considering spatial/non-spatial attributes of POIs as well as user-defined preferences. The dynamic nature of MUSQ make its authenticated processing unique and challenging. The most related work is \cite{deng2007multi, geng2012spatial}, which can process multi-source skyline queries (MSQ). Our work is different from theirs in two aspects: 1) their algorithms aim to process the query efficiently but not considering the authentication problem; 2) MSQ does not support user-defined preferences, which makes our query processing more flexible and general. In our work, we formulate MUSQ authenticated processing problems, based on which, we design an effective authenticating scheme.
+
+
+\section{Problem Formulation}\label{problem_formulation}
+
+Without loss of generality, we consider a set of spatial POIs, $\mathcal{P}$. Each POI can be represented as $p=\{id, r\}$, where $id$ is $p$'s identifier and $r = \{r_0,r_1,\ldots,r_m\}$ is an attribute set of $p$. Specially, $r_0 = \langle x,y \rangle$ is $p$'s location (its latitude and longitude), $r_i$ $(1\leq i \leq m)$ is $p$'s non-spatial attribute (e.g., customers' ratings, prices). Each non-spatial attribute value $r_i$ $(1\leq i \leq m)$ is normalized to $(0,1]$ such that there exists a POI in $\mathcal{P}$ with its value on the $i$-th attribute equal to 1 for each $i \in [1,m]$. We assume a smaller value on each attribute is more preferable. If it is not true for an attribute, we can multiply all its values by -1. Fig. \ref{query} illustrates a dataset of nine restaurants $\mathcal{P}= \{p_0 ,p_1,\ldots,p_8\}$,  each of which representing a POI with three attributes: \emph{location}, \textit{customers' ratings}, and \textit{prices}. The non-spatial attributes of POIs are normalized to $(0,1]$ as shown in the table.
+
+In the following subsections, we first formulate the multiple user-defined spatial query (MUSQ) using the above database conceptualization, then we introduce our authentication problems.
+
+
+\subsection{Problem Definitions}
+
+A MUSQ can be formulated as $\mathcal{Q}=\{\mathcal{U},\mathcal{W},\mathcal{P},k\}$, where $\mathcal{U}=\{u_0,u_1,\ldots,u_{n-1}\}$ is the set of querying users, $\mathcal{P}=\{p_0,p_1,\ldots,p_s\}$ is the set of POIs. $\mathcal{W}=\{w_0,w_1,\ldots,w_{n-1}\}$ is the set of user-defined preferences. In our scenarios, users can express their preference in two formats. The first is positive examples and the second is preference orderings. For the first preference format ...
+For the second preference format, let $O^k = (o^k(0),\ldots,o^k(n-1))$ be an ordered vector defined by each user $u_k$ ($u_k \in \mathcal{U}$) to express his/her preference on each attribute of POIs. $o^k(\cdot)$ is a permutation of POI attribute orders which represents $u_k$'s ranking position for each attribute $r_i, i = \{0,\ldots,m\}$. The permutation are ranked from the best to the worst. For example, there are four attributes $r_1,r_2,r_3,r_4$, and $u_1$ gives his preferences as $O^1 = \{3,1,4,2\}$. Then we can get $r_3$ is most preferred by $u_1$ while $r_2$ is the worst.
+
+%Each $w_i=\langle w_{i0},w_{i1},\ldots,w_{i,m}\rangle, (0\leq i<n)$ is an $m+1$ dimensional vector that is $u_i$'s defined weights for the spatial ($w_{i0}$) and non-spatial ($w_{i1},\ldots,w_{i,m}$) attributes of POIs. In this paper, we will use weight and preference interchangeably. Note that the sum of all elements in the vector $w_i$ satisfies $w_{i0}+w_{i1}+\ldots+w_{i,m}=1.0$. When querying users consider no preference on the attributes, $\mathcal{W} = \emptyset$. The MUSQ querying results $\mathcal{R}$ is the subset of $\mathcal{P}$, $\mathcal{R} \subseteq \mathcal{P}$, and $\|\mathcal{R}\|=k$.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/Fig_3.jpg}
+	\caption{An Example of MUSQs}\label{query}
+\end{figure}
+
+\begin{myDef}[Non-spatial Dominance]\label{Definition1}
+    Given two POIs $p$ and $p'$, if $p'$ is no worse than $p$ on all non-spatial attributes, then we say $p'$ non-spatially dominates $p$, and $p'$ is a non-spatial dominator of $p$. Formally, it is denoted as $p \lhd p'$, and the set of $p$'s non-spatial dominator objects is denoted as $Dom(p)$.
+\end{myDef}
+
+\begin{myDef}[Dominance]\label{Definition2}
+    Given a user set $\mathcal{U}$ and two POIs $p$ and $p'$, if (1) $p'$ non-spatially dominates $p$, and (2) $p'$ is closer to all users $\mathcal{U}$ than $p$ (i.e., $p'$ also spatially dominates $p$), then we say $p'$ dominates $p$ w.r.t. the user set $\mathcal{U}$.
+\end{myDef}
+
+Taking into all users' preference $\mathcal{W}$ into consideration, we can define the weighted dominance of two POIs.
+
+\begin{myDef}[Weighted non-spatial dominance]\label{Definition3}
+    Given a POI $p$ and all users' preference set $\mathcal{W}$, the weighted sum of non-spatial attributes of $p$ is denoted as $\diamondsuit(p)$:
+    \begin{equation*}
+        \diamondsuit(p) = \sum_{j=1}^{m}(\sum_{i=0}^{n-1}w_{ij} * r_j)
+    \end{equation*}
+
+    Given two POIs $p$, $p'$ and  all users' preference set $\mathcal{W}$, if $\diamondsuit(p')$ is no larger than $\diamondsuit(p)$, then we say $p'$ weighted-dominates $p$ on all non-spatial attributes. Formally, it is denoted as $p\lessdot p'$, the set of $p$'s weighted non-spatial dominator objects is denoted as $Wdom(p)$.
+\end{myDef}
+
+\begin{myDef}[Weighted spatial dominance]\label{Definition4}
+    Given a POI $p$ and all users' preference set $\mathcal{W}$, the weighted sum of distance from all users $\mathcal{U}$ to $p$ is defined as:
+    \begin{equation*}
+        ad_{sum}(p) = \sum_{i=0}^{n-1}(w_{i0} * \lVert p,u_i\rVert)
+    \end{equation*}
+    where $\lVert p,u_i\rVert (0 \leq i < n)$ is the Euclidean distance between $p$ and user $u_i$.
+
+    Given two POIs $p$, $p'$ and  all users' preference set $\mathcal{W}$, if $ad_{sum}(p')$ is no larger than $ad_{sum}(p)$, then we say $p'$ weighted-dominates $p$ on the spatial attribute.
+\end{myDef}
+
+\begin{myDef}[Weighted Dominance]\label{Definition5}
+    Given a user set $\mathcal{U}$, all users' preference set $\mathcal{W}$ and two POIs $p$ and $p'$, if (1) $p'$ does not dominates $p$, (2) $p'$ weighted-dominates $p$ on all non-spatial attributes, and (3) $p'$ weighted-dominates $p$ on the spatial attribute, then we say $p'$ weighted-dominates $p$ w.r.t. the user set $\mathcal{U}$.
+\end{myDef}
+
+\begin{myDef}[The optimal points for MUSQ result]\label{Definition6}
+    Given a user set $\mathcal{U}$, all users' preference set $\mathcal{W}$, and a POI dataset $\mathcal{P}$, the optimal POIs of $Q = \{\mathcal{U},\mathcal{W},\mathcal{P},k\}$ are $k$ points stored in the result set $\mathcal{R}$, which are not dominated or weighted-dominated by any other POIs in $\mathcal{P}$ w.r.t. the querying user set $\mathcal{U}$.
+\end{myDef}
+
+Fig. \ref{query} illustrates a MUSQ example. The user set is $\mathcal{U}=\{u_0, u_1, u_2\}$ whose locations are shown in Table \ref{Usergroupinformation}\ref{UserLocations}. These three users tend to find three candidate restaurants ($k=3$) with their own defined preferences for arranging their meeting place. Table \ref{Usergroupinformation}\ref{UserPreferences} shows their preferences set $\mathcal{W}$ on ``spatial proximity'', ``customers' ratings'' and ``prices''. Table \ref{Restaurants} shows the weighted spatial and non-spatial attributes of the restaurants with respect to the user group information. For example, the $\diamondsuit{p_1}$ is calculated as: $\diamondsuit(p_1) =  \sum_{j=1}^{3}(\sum_{i=0}^{2}w_{ij} * r_j) = 0.75$. The $ad_{sum}(p_1)$ is computed as: $ad_{sum}(p_1) = w_{10}*|p_1,u_1| + w_{20}*|p_1,u_2| +  w_{30}*|p_1,u_3| = 3.38$.
+
+The result set $\mathcal{R}$ equals $\{p_1,p_2,p_4\}$ because $p_0$ is weighted-dominated by $p_1$ and $p_2$; $p_3$ is weighted-dominated by $p_2$ and $p_5$; $p_6$, $p_7$ and $p_8$ is weighted-dominated by $p_4$ respectively. 
+
+When users only provide their preferences on the spatial proximity, that is $w_{i}=\langle 1,0,\ldots,0\rangle$, their MUSQ can be treated as $k$-\emph{aggregated nearest neighbor} (\emph{k}ANN) queries. In the example of Fig. \ref{query}, when users define their preferences vector as $\langle 1,0,\ldots,0\rangle$ respectively and set $k=1$, the server returns $p_4$ as $p_4$ has the minimum distance to the three users among 9 POIs, and thus it weighted-dominates other 8 POIs. 
+
+Further, when there is only one user, that is $\|\mathcal{U}\|=1$, his MUSQ can be regarded as $k$-nearest neighbor queries (\emph{k}NN). In the same example, $u_0$'s query result is $p_0$ when $k=1$ because it is the nearest POI to him, hence, $p_0$ weighted-dominates other 8 POIs.
+
+When $\|\mathcal{U}\|=1$, the $\mathcal{W}=\emptyset$ and $k$ is unknown, his MUSQ can be treated as skyline queries. The query returns skyline POIs that are not dominated by any other POIs in $\mathcal{P}$. In the example,  $u_0$'s query result is $\{p_1,p_2,p_4\}$, because $p_0$ is dominated by $p_1$; $p_3$ is dominated by $p_2$; and $p_5$, $p_6$, $p_7$ and $p_8$ is dominated by $p_2$ and $p_4$ respectively.
+
+\begin{table}
+	\centering
+	\subtable[User Locations]{
+		\begin{tabular}{|c|c|}
+			\hline
+			$User$ & $location$\\
+			\hline
+			$u_0$ & (5,5)\\
+			%\hline
+			$u_1$ & (8,6) \\
+			%\hline
+			$u_2$ & (10,3) \\
+			\hline
+		\end{tabular}
+		\label{UserLocations}
+	}
+	\qquad
+	\subtable[User Preferences]{
+		\begin{tabular}{|c|c|c|c|}
+			\hline
+			$User$ & 
+			$spatial$ $proximity$ &			 
+			$customers'$ $rating$  & $price$ \\
+			\hline
+			$u_0$ & 0.2 & 0.3 & 0.5 \\
+			%\hline
+			$u_1$ & 0.25 & 0.75 & 0  \\
+			%\hline
+			$u_2$ & 0.3 & 0.6 & 0.1 \\
+			\hline
+		\end{tabular}
+		\label{UserPreferences}
+	}
+	\caption{User Group Information}
+	\label{Usergroupinformation}
+\end{table}
+
+\begin{table}
+	\begin{center}\scriptsize
+		\begin{tabular}{|c|c|c|}
+			\hline
+			$Restaurant$ & $\diamondsuit(p)$ & $ad_{sum}(p)$ \\
+			\hline
+			$p_0$ & 1.26 & 4.60 \\
+			$p_1$ & 0.75 & 3.38 \\
+			$p_2$ & 0.55 & 3.64 \\
+			$p_3$ & 1.01 & 5.26 \\
+			$p_4$ & 1.68 & 1.95 \\	
+			$p_5$ & 1.91 & 2.33 \\
+			$p_6$ & 1.91 & 3.65 \\
+			$p_7$ & 1.97 & 5.81 \\	
+			$p_8$ & 1.86 & 8.30 \\		
+			\hline
+		\end{tabular}
+	\end{center}
+	\caption{Weighted Attributes of the Restaurants}\label{Restaurants}
+\end{table}
+
+
+\subsection{Authentication Problems}
+
+The queries $\mathcal{Q}$ are executed by the service provider (SP) on the POI set $\mathcal{P}$, which is authorized and signed by the data owner (DO). Users need to verify the returned result $\mathcal{R}$. The authentication problem is for querying users to verify that the SP executes all queries credibly in terms of three authenticity condition: (1) \emph{soundness}: the returned result set $\mathcal{R}$ is the genuine MUSQ result and has not been tampered with; (2) \emph{completeness}: no genuine MUSQ results are missing; (3) \emph{correctness}: Each POI in the result set $\mathcal{R}$ satisfies all users' preferences. 
+
+Thus, the authentication involves three correlated issues: (1) ADS design and signature generation by DO; (2) online query processing and VO construction for each user by SP; (3) result verification based on the received VO and signatures by all querying users.
+
+\begin{table}
+    \begin{center}\scriptsize
+        \begin{tabular}{c | c}
+            \hline
+            Symbol & Meaning \\
+			\hline
+			$\mathcal{U}$ & a group of querying users \\
+			$u_i$ & a user's identifier \\
+			$\mathcal{P}$ & the dataset of POIs \\
+			$p$ & a POI in $\mathcal{P}$\\
+			$\mathcal{W}$ & the weight set of $\mathcal{U}$\\	
+			$w$ & the weight of a user\\	
+			$\diamondsuit(p)$ & the weighted sum of non-spatial attributes of $p$ \\
+			$ad_{sum}(p)$ & the weighted sum of distance from $p$ to $\mathcal{U}$ \\		
+			$\| p,u \|$ & Euclidean distance from $p$ to $u$\\
+			$\mathcal{R}$ & the query result set\\
+			\hline
+		\end{tabular}
+	\end{center}
+	\caption{Value Storage Table}\label{Symbol}
+\end{table}
+
+Table \ref{Symbol} summarizes the notations frequently used in this paper.
+
+
+\section{MUSQ Processing and Authentication}\label{basic}
+
+\subsection{Design of Authenticated Data Structure}
+
+We use an MR-tree to index POIs for MUSQ processing and authentication. DO groups the POIs in  $\mathcal{P}$ by their spatial attributes (latitude and longitude). Each group is called as a minimum bounding rectangle (MBR), which is indexed as a leaf node of an MR-tree attached with a corresponding digest. The digest is calculated as:
+\begin{equation*}
+    h = hash(p_1 | p_2 | \cdots | p_t)
+\end{equation*}
+where $hash(\cdot)$ is a one-way cryptographic hash function such as SHA-1 \cite{SHA1}, ``$|$'' is a concatenation operator, and $p_i$ is the $i$-th POI in the MBR. Each internal node is a larger MBR containing child MBRs, their pointers as well as its digest. The digest of an internal node is computed as:
+\begin{equation*}
+    h = hash(MBR_1 | h_1 | MBR_2 | h_2 | \cdots | MBR_n | h_n)
+\end{equation*}
+where $MBR_i$ is the $i$-th child MBR and $h_i$ is the corresponding digest summarizing child nodes' MBRs and their digests. Recursively, an MR-tree is constructed from leaf to root. Only the root node is signed by DO as $Sig(h_{root})$ using its private key.
+
+Fig. \ref{VoMR} shows an MR-tree built from the POIs in Fig. \ref{query}. The leaf entry $e_3$ stores the MBR $N_1$, the pointer to POIs $p_1, p_4$ in $N_1$, and the digest derived from $p_1, p_4$ as $h(e_3) = hash(p_1|p_4)$. The internal entry $e_1$ stores the MBR $N_3$, the pointer to the child MBRs $N_1, N_2$, and the digest derived from $N_1, N_2$ as $h(e_1) = hash(N_1 | h(e_3) | N_2 | h(e_4))$. The root node digest is $h(e_{root}) = hash(N_3 | h(e_1) | N_6 | h(e_2))$. The root signature is generated by signing the digest of the root node $e_{root}$ using the DO's private key.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/Fig_4.jpg}
+	\caption{An Illustration of MR-tree}\label{VoMR}
+\end{figure}
+
+
+\subsection{Weight Transformation}\label{WeightTransformation}
+
+In the above scenario of MUSQ, users need to provide their preferences in the form of $\mathcal{W} = \{w_0, w_1, \ldots, w_{n-1}\}$. However, it may not be easy for common users to precisely define their preference as weights on all criteria. It would be more friendly for users if there is an easier way to express their preferences. Therefore, in this paper, we provide authentic user-friendly methods for users to express their preferences as a complement for MUSQ.
+
+It's common that users have different backgrounds, which leads to a variety of ways on expressing their favorites. One of the ways is representative example, which simply choose an exact alternative POI, whose attributes can be the representation of the preference. Other ways include ordered list, etc. All these ways are more user-friendly compared to the original one, which requires users to directly provide exact weights on all the criteria.
+
+However, to process MUSQ, a uniform expression of preference is still needed, which is the weight matrix $\mathcal{W}$. We design authentic transformation methods to translate different users' preferences into weight matrix $\mathcal{W}$. 
+
+\subsubsection{Representative Example into Weight Matrix}
+
+
+\subsubsection{Other Types of Preferences into Weight Matrix}
+\cite{} discuss the transformation methods from an preference orders into a weight matrix.
+The preference orderings $O^k$ of $u_k$ can be transformed into a preference relation on the attribute $r_i$ and $r_j$ as follows:
+\[p^k_{ij} = 9^{u^k_i - u^k_j} , i,j = 1,...m\]
+In this equation, $u^k_i$ and $u^k_j$ can be computed based on the attribute $r_i$ and $r_j$, respectively and $v$ is defined as a non-decreasing function.
+\[u^k_i = v(n-o^k(i))\] 
+\[u^k_j = v(n-o^k(j))\]
+An example of $v$ is $v = \frac{1}/{n-1}$ and thus 
+\[u^k_i = \frac{n-o^k(i)}{n-1}\]
+
+
+...
+
+
+
+\subsection{Query Processing and VO Construction}\label{processing}
+
+As discussed above, an MUSQ $\mathcal{Q}(\mathcal{U}, \mathcal{W}, \mathcal{P}, k)$ retrieves a result set $\mathcal{R}$ containing $k$ POIs that are not dominated or weighted-dominated by any other POIs in $\mathcal{P}$ w.r.t. the querying user set $\mathcal{U}$.
+
+Initially, the result set $\mathcal{R}$ and verification object $VO$ are empty. SP computes an additional value $v_{sum}$ for each node $N$ of the MR-tree and each POI object $p$ in the leaf node. $v_{sum}$ will be used to determine the traversal sequence of the MR-tree. For a POI object $p$ in the leaf node, $v_{sum}(p)$ is computed based on $\mathcal{U}$ and $\mathcal{W}$ as:
+\begin{equation*}
+    v_{sum}(p) = ad_{sum}(p) + \diamondsuit(p)
+\end{equation*}
+where $ad_{sum}(p)$ is the weighted sum of spatial attribute and $\diamondsuit(p)$ is the weighted sum of non-spatial attributes.
+For a node $N$ of the MR-tree which represents an MBR, $v_{sum}(N)$ is computed as:
+\begin{equation*}
+    v_{sum}(N) = \min_{p_i \in N}(ad_{sum}(N.p_i)) + \min_{p_j \in N}(\diamondsuit(N.p_j))
+\end{equation*}
+where $N.p_i, N.p_j$ is a POI covered by the MBR $N$ respectively, $\min_{p_i \in N}(ad_{sum}(N.p_i))$ and $\min_{p_j \in N}(\diamondsuit(N.p_j))$ represents the minimum value among all the corresponding values of the POIs contained by $N$ respectively. 
+%It's worth noting that, $v_{sum}$ exists only when the weight set $\mathcal{W} \not= \emptyset$.
+
+Before presenting our detailed algorithm, we introduce two lemmas from \cite{papadias2003optimal}.
+
+%Given a POI $p$ and a region $S$, if and only if $p$ weighted-dominates all POIs in $S$, we say $p$ weighted-dominates $S$.
+
+\begin{lemma}\label{Lemma1}
+    Given a querying user set $\mathcal{U}$, if a POI $p$ dominates or weighted-dominates another POI $p'$, we must have $v_{sum}(p) < v_{sum}(p')$; if a POI $p$ dominates or weighted-dominates a region $S$, we must have $v_{sum}(p)<v_{sum}(\mathcal{S})$
+\end{lemma}
+
+\begin{lemma}\label{Lemma2}
+    Any POI added to a candidate result set based on a traversal MR-Tree in ascending order of $v_{sum}$ of POIs is guaranteed to be a final result set.
+\end{lemma}
+
+Based on Lemma \ref{Lemma2}, only a single traversal of the MR-Tree is needed to obtain the final result set $\mathcal{R}$. The computed $v_{sum}$ is used to determine the traversal sequence of the MR-tree. To achieve this, SP maintains a min heap $\mathcal{H}$ to keep the index nodes that is to be scanned with the ascending order of $v_{sum}$. The root node of MR-tree is added to $\mathcal{H}$ and $VO$ at first. For each step, the top of $\mathcal{H}$ pops up, either $\mathcal{R}$ or $VO$ will be expanded. SP examines whether the popped entry of $\mathcal{H}$ is dominated or weighted-dominated by any existing objects in $\mathcal{R}$. If it is, the corresponding node or object is added into $VO$. Otherwise, (1) if it's an internal node of MR-tree, its child nodes will be added into $\mathcal{H}$; (2) if it's a leaf node, all the POI objects covered by the node will be added into $\mathcal{H}$; (3) if it's a POI object, it will be added directly into $\mathcal{R}$. In some special cases where $\mathcal{W}$ is not defined by users, SP only needs to examine the dominance relationships during the process. The process ends when $\mathcal{H}$ is empty.
+
+After the process, SP compares the number of POIs in $\mathcal{R}$ (denoted as $\|\mathcal{R}\|$) with the user-defined parameter $k$. If $\|\mathcal{R}\| > k$, SP sorts the POIs by their values of $v_{sum}$ and marks the top-$k$ POIs as the final result, then adds the rest into $VO$. If $\|\mathcal{R}\| = k$, SP directly returns $\mathcal{R}$ as the final result. 
+
+If $\|\mathcal{R}\| < k$, a second round query is needed. SP recomputes the $v_{sum}$ of the nodes in MR-tree and POIs in leaf nodes while the POIs in the current $\mathcal{R}$ are omitted. Then, SP executes the same traversal process and gets the results of the second round. This process continues until $\|\mathcal{R}\| \geq k$. The result objects of each round along with their $VO$ are grouped and ranked by their round sequence for further authentication. 
+
+It's worth noting that, $k$ is an optional parameter. If it's not defined by $\mathcal{U}$, SP should return all the calculated result objects of the first round in $\mathcal{R}$.
+
+The final VO contains 3 types of data: (1) the POI objects, (2) the MBRs along with theirs digests, and (3) all users' query information $\mathcal{U}$ and $\mathcal{W}$.
+
+Algorithm \ref{Algorithm1} illustrates the query processing and VO construction. Step (1) initiates the original result set $\mathcal{R}$ and VO; step (3) to (10) initiates the query process for each round; step (11) to (25) iterates the MR-tree and find the result set $G_i$ for round $i$ which does not contain any dominance or weighted dominance relationship; step (27) to (30) further sorts and prunes $\mathcal{R}$; and step (31) to (33) return $\mathcal{R}$ and VO to querying users.
+
+Fig. \ref{MR-TreeExample} shows the MR-tree hierarchical structure of the POIs in Fig. \ref{VoMR}. For each node, its $v_{sum}$ value is marked on the right side of the colon. Assume the user requested POI number $k = 4$. When running Algorithm \ref{Algorithm1}, the data structure we use, including the min-heap $\mathcal{H}$ and result set $\mathcal{R}$, will be changed step by step as shown in Table \ref{ChangesoftheDataStructures}. Further, $VO$ will be gradually expanded during the query process. In the beginning, the top element $e_{root}$ is popped from the heap $\mathcal{H}$. All top elements are internal nodes until step (5). At step (5), $p_4$ is popped from $\mathcal{H}$ and becomes the first result point. At step (6), as $e_4$ is dominated by $p_4$, it should be pruned. Hence, we insert $e_4$ into $VO$. Next, $p_1$ and $p_2$ are popped from $\mathcal{H}$. The result set is updated to $\{p_4,p_1,p_2\}$ (step (7) and step (8)). Then, $p_0$ and $p_3$ are popped from $\mathcal{H}$. As $p_0$ is dominated by $p_1, p_2$ plus $p_3$ is dominated by $p_2$, we insert them into $VO$. Similarly, $e_6$ is dominated by $p_2$. We also insert it into $VO$. Finally, we get the query result $R= \{p_1,p_4,p_2\}$ and the verification object $VO = \{e_4,p_0,p_3,e_6\}$.
+
+\begin{algorithm}[H]\scriptsize
+	\caption{Query Processing and VO Construction}
+	\label{Algorithm1}
+	\begin{algorithmic}[1]
+		\REQUIRE~~ \\
+		$\mathcal{U}$: the user set \\
+		$\mathcal{P}$: the POI set \\
+		$\mathcal{W}$: the user-defined weight set \\
+		$k$: the requested number of result POIs
+		\ENSURE~~ \\
+		$\mathcal{R}$: the result set \\
+		$VO$: the verification object \\
+		\STATE $\mathcal{R} = \emptyset, VO = \emptyset, i = 0$ // $i$ represents $i$-th round
+		\WHILE {$\|\mathcal{R}\| < k$}
+		    \STATE $i = i + 1$
+		    \FOR {each node $N$ in MR-tree, and POI $p \notin \mathcal{R}$ in leaf nodes}
+			    \STATE calculate $v_{sum}(p) = ad_{sum}(p) + \triangle(p)$
+			    \STATE calculate $v_{sum}(N) = \min_{p_i \in N} ad_{sum}(N.p_i) + \min_{p_j \in N} \triangle(N.p_j)$
+			\ENDFOR
+			\STATE initiate result group: $G_{i} = \emptyset$, and $VO$ group: $VO_{i} = \emptyset$
+    		\STATE initiate min heap $\mathcal{H}$ by $v_{sum}$: $\mathcal{H} = \emptyset$
+			\STATE $\mathcal{H} \leftarrow$ root node of MR-tree
+		\WHILE {$\mathcal{H} \neq \emptyset$}
+		    \STATE $current \leftarrow \mathcal{H}.pop$
+		    \IF {$current$ is dominated/weighted-dominated by existing $G_{i}$}
+		        \STATE $VO_{i} \leftarrow current$
+		    \ELSE
+		        \IF {$current$ is internal node}
+    		        \STATE $\mathcal{H} \leftarrow$ child nodes of $current$
+		        \ELSIF {$current$ is leaf node}
+	    	        \STATE $\mathcal{H} \leftarrow$ covered POIs of $current$
+		        \ELSE
+		            \STATE $G_{i} \leftarrow current$
+		        \ENDIF
+		    \ENDIF
+		\ENDWHILE
+		\STATE $\mathcal{R} = \mathcal{R} \cup G_{i}$, $VO = VO \cup VO_i$
+		\ENDWHILE
+        \IF {$\|\mathcal{R}\| > k$}
+            \STATE sort $\mathcal{R}$ by $v_{sum}$ in ascending order
+            \STATE keep the first $k$ POIs, add rest to $VO$
+        \ENDIF
+		\FOR{each user $u_i \in U$}
+		\STATE return $R, U, W, VO$ to $u_i$
+		\ENDFOR
+	\end{algorithmic}
+\end{algorithm}
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/Fig_5.jpg}
+	\caption{Node Hierarchy of MR-tree}\label{MR-TreeExample}
+\end{figure}
+
+\begin{table}
+	\begin{center}\scriptsize
+		\begin{tabular}{ c |c| c}
+			\hline
+			Min-Heap $\mathcal{H}$ & Result set $\mathcal{R}$ & Step  \\
+			\hline
+			$e_{root}$ & & (1)\\
+			$e_1$, $e_2$ & & (2) \\
+			$e_2$,$p_4$,$e_4$,$p_1$ & & (3) \\
+			$e_5$,$p_4$,$e_4$,$p_1$,$e_6$ & & (4)\\
+			$p_4$,$e_4$,$p_1$,$p_2$,$p_0$,$p_3$,$e_6$ & & (5)\\
+			$e_4$, $p_1$,$p_2$,$p_0$,$p_3$,$e_6$ & $\{p_4\}$ & (6) \\
+			 $p_1$,$p_2$,$p_0$,$p_3$,$e_6$  & $\{p_4\}$ & (7)\\
+			$p_2$,$p_0$,$p_3$,$e_6$ & $\{p_4,p_1\}$ & (8) \\
+			$p_0$,$p_3$,$e_6$ & $\{p_4,p_1,p_2\}$ & (9)\\
+			$\emptyset$ &  $\{p_4,p_1,p_2\}$ & (10)\\
+			\hline
+		\end{tabular}
+	\end{center}
+	\caption{Changes of the Data Structures}\label{ChangesoftheDataStructures}
+\end{table}
+
+\subsection{Authentication of Weight Transformation}
+
+As the transformation process is executed by the service provider (SP), users need to verify that the process is executed authentically, i.e., the result weight matrix is computed . This can be done by using verifiable computation. (?)
+
+
+\subsection{Query Authentication}\label{authentication}
+
+When users receive the result set $\mathcal{R}$ along with the verification object $VO$, each of them authenticates the result by verifying its soundness, completeness, and correctness as follows.
+
+First, each user computes the digest of the root node based on $VO$, and compares the computed digest with the original one signed by the data owner. If it is the same, the soundness of $R$ is guaranteed.
+
+Then, he/she checks whether the number of POIs in $R$ equals user requested POI number $k$. After that, for each result group $G_i$ in $\mathcal{R}$ and corresponding $VO_i$, he/she verifies the correctness of $G_i$ by examining the internal dominance/weighted dominance relationships among the POIs in $G_i$. If they are not dominated/weighted-dominated by each other, the correctness of $G_i$ is guaranteed. Next, he/she verifies whether all the POIs/MBRs in $VO_i$ are dominated/weighted-dominated by any POIs in $G_i$. If all of them are dominated/weighted-dominated by some POIs in $G_i$, the completeness of $G_i$ is guaranteed. However, if there exists POIs in $VO_i$ that are not dominated/weighted-dominated by $G_i$ but have worse values of $v_{sum}$ than all the POIs in $G_i$, the completeness of $G_i$ is also guaranteed. (This happens when the original result of the last group has more POIs than what he/she actually needs.) Further, he/she verifies whether POIs in the higher ranked groups dominate/weighted-dominate those in the lower ranked ones. This guarantees the correctness of the whole result set $\mathcal{R}$.
+
+Algorithm \ref{Algorithm2} illustrates the verification process. Step (2) to (5) verifies the soundness of $\mathcal{R}$ by comparing the computed root digest with the original one; step (6) to (9) examines the POI number in $\mathcal{R}$. Then for each result group $G_i \in \mathcal{R}$, step (11) to (14) verifies the correctness of $G_i$ by examining the dominance relationships between the POIs in $G_i$; step (15) to (18) verifies the completeness of $G_i$ by examining the dominance relationships between $G_i$ and $VO_i$. Further, step (19) to (22) verifies the dominance relationships among different groups, which finally guarantees the correctness of $\mathcal{R}$. If SP intentionally misses or modifies some objects of the result, the comparison of the root digest would fail; and if it returns some incorrect objects, the verification of the dominance/weighted dominance relationships would also fail.
+
+\begin{algorithm}[H]\scriptsize
+	\caption{Query Authentication}
+	\label{Algorithm2}
+	\begin{algorithmic}[1]
+		\REQUIRE~~\\
+		$\mathcal{R}$: the result set\\
+		$VO$: the verification object
+		\ENSURE~~\\
+		$Auth$: the state of authentication
+		\FOR{each user $u_i \in U$}
+		    \STATE calculate the root digest based on $VO$
+		    \IF {computed root digest $\neq$ original root digest}
+		        \STATE return $Auth = fail$
+		    \ENDIF
+		    \STATE examine the POI number in $\mathcal{R}$
+		    \IF {$\|\mathcal{R}\|\neq k$}
+		        \STATE return $Auth = fail$
+		    \ENDIF
+		    \FOR{each result group $G_i$ in $\mathcal{R}$}
+		        \STATE examine the internal dominance between each other in $G_i$
+		        \IF {$\exists p, p' \in G_i$ such that $p$ is dominated/weighted-dominated by $p'$}
+		            \STATE return $Auth = fail$
+		        \ENDIF
+		        \STATE examine the dominance between POIs in$G_i$ and objects in $VO_i$
+    		    \IF {$\exists p \in VO_i$ such that $p$ is not dominated/weighted-dominated by any POIs in $G_i$, and $p_i.v_{sum} > \min_{p' \in G_i}p'.v_{sum}$}
+		            \STATE return $Auth = fail$
+		        \ENDIF
+		        \STATE examine the dominance between result groups
+		        \IF {$\exists p \in G_{i+k}$ such that p is not dominated/weighted-dominated by any POIs in $G_i$}
+		            \STATE return $Auth = fail$
+		        \ENDIF
+		    \ENDFOR
+		    \STATE return $Auth = success$
+		\ENDFOR
+	\end{algorithmic}
+\end{algorithm}
+
+Again, consider the example in Fig. \ref{VoMR} with $k=4$. The result set becomes $\mathcal{R} = \{G_1\{p_{1}, p_{4}, p_{2}\}, G_2\{p_{5}\}\}$, and $VO$ becomes $VO= \{VO_1\{e_{4}, p_{0}, p_{3}, e_{6}\},VO_2\{p_{6}, p_{0}, p_{3}, e_{6}\}\}$. Upon receiving $\mathcal{R}$ and $VO$, the user computes the root digest from the bottom up to check the soundness condition as follows: first $h_{p_1} = hash(p_1)$, $h_{p_4} = hash(p_4)$, $h_{1} = hash(h_{p_4}|h_{p_1})$, $h_{2} = hash(h_1|h_{e_4})$, then $h_{p_2} = hash(p_2)$, $h_{p_0} = hash(p_0)$, $h_{p_3} = hash(p_3)$, $h_{3} =hash(h_{p_2}|h_{p_0}|h_{p_3}) $, $h_4 = hash(h_3 | hash(e_6))$, and finally $h_{root} = hash(h_{2} | h_{4})$. By comparing $h_{root}$ with the signed root digest $Sig(e_{root})$ from the data owner, he/she can verify the soundness of the result. If any item in $\mathcal{R}$ or $VO$ is missed or modified by SP, the comparison wouldn't succeed. Then, he/she verifies each result group respectively. For the first group $G_1$, he/she verifies the correctness condition by checking the dominance relationship of $G_1$, i.e., all POIs $\{p_1, p_4, p_2\}$ in $G_1$ are not dominated/weighted-dominated by each other. Next, he/she verifies the completeness condition by checking the dominance relationship between $G_1$ and $VO_1$. That is, all non-result points $p_0, p_3$ and pruned MBRs $e_4, e_6$ in $VO_1$ are dominated by some POIs in $G_1$. If SP returns $p_8$ instead of $p_1$, the internal dominance verification of $G_1$ fails as $p_8$ is dominated by $p_4$ and $p_2$. If SP removes $p_1$ from $G_1$, SP has to add $p_1$ into $VO_1$, (otherwise the root digest comparison would fail), the dominance relationship between $G_1$ and $VO_1$ fails as $p_1$ is not dominated/weighted-dominated by $p_4$ or $p_2$. For the second group $G_2$, he/she verifies the correctness that POIs in $G_2$, i.e. $p_{5}$, is not dominated by itself. Then he/she verifies the completeness of $G_2$ that $p_{6}, e_{6}$ in $VO_2$ are all dominated by $p_{5}$, while $p_{0}, p_{3}$ are not. The completeness verification also succeeds because $p_{0}, p_{3}$ has worse $v_{sum}$ than $p_5$, which means they exceed the query number $k$ and therefore are pruned from $G_2$. Finally, he/she verifies the correctness of the whole result set $\mathcal{R}$ that all the POIs in $G_2$ are dominated by all the POIs in $G_1$, i.e., $p_{5}$ is dominated by $p_{1}, p_{4}, p_{2}$. If $p_{5}$ is not dominated/weighted-dominated by $p_{1}, p_{4}, p_{2}$, it means that SP returns incorrect POIs. Further, if SP intentionally misses $G_1$ and adds other POIs into $\mathcal{R}$ to fulfill the result number $k$, the dominance verification can't succeed because POIs in $G_1$ will be added into $VO$, and thus will dominate the POIs in $\mathcal{R}$. If all these verifications succeed, he/she can be sure that the soundness, completeness and correctness of the result are guaranteed.
+
+
+\section{Authentication of Special Cases}
+
+\subsection{Authentication for Skyline Queries}
+
+A skyline query finds the optimal POIs for the user considering both spatial and non-spatial attributes. We can treat a skyline query as a special case of MUSQ when $\|\mathcal{U}\|=1$, $\mathcal{W}=\emptyset$, and $k$ is not defined. SP follows the same query process as MUSQ, except when calculating $v_{sum}$, no weights are needed. So the concept of weighted dominance no longer exists. SP only needs to determine the dominance relationships among the visited MBRs or POI objects during query processing.
+
+To authenticate the result, user follows a similar process of MUSQ as: (1) compute the root digest and examine the sameness with the original one signed by DO; (2) examine the POIs in $\mathcal{R}$ are not dominated by each other; (3) examine the nodes in the rest of $VO$ are all dominated by the POIs in $\mathcal{R}$.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/Fig_6.jpg}
+	\caption{Node Hierarchy of MR-tree of A Skyline Query Example}
+	\label{examplesky}
+\end{figure}
+
+Consider the spatial dataset in Fig. \ref{query}, whereas there is only one user $u_1$ with location $(5,5)$ and the preference set $W = \emptyset$. Fig. \ref{examplesky} illustrates the corresponding MR-tree structure with $v_{sum}$ values marked on the right side of each node. Table \ref{ds2} illustrates the processing steps. In the beginning, the top element $e_{root}$ is popped from the heap $\mathcal{H}$. All top element is internal entry until step (6). At step (6), $p_2$ pops up from $\mathcal{H}$ and becomes the first result point $R =\{p_2\}$. After that, as $p_4$ and $p_1$ are not dominated by the result point in $\mathcal{R}$, we insert $p_4$ and $p_1$ into $\mathcal{R}$ (step 7-8). Next, $p_0$ is dominated by $p_1$, and $p_3$ is dominated by $p_2$. So these two POIs are pruned and inserted into $VO$ (step 9). Similarly, $e_4$ and $e_6$ are dominated by POIs in $\mathcal{R}$ and are inserted into $VO$. Finally, we get the query result $R= \{p_1,p_4,p_2\}$ and $VO = \{e_4,p_0,p_3,e_6\}$. Upon receiving the query result and $VO$, the user first reconstructs the root node $e_{root}$ using POIs and MBRs in $\mathcal{R}$ and $VO$. Then, he/she verifies the correctness of $\mathcal{R}$ by checking that the result POIs $p_1,p_4,p_2$ in $\mathcal{R}$ are not dominated by each other. Finally, he/she verifies the completeness of $\mathcal{R}$ by checking that all non-result POIs and MBRs $e_4,p_0,p_3,e_6$ in $VO$ are dominated by POIs in $\mathcal{R}$.
+
+\begin{table}
+	\begin{center}\scriptsize
+		\begin{tabular}{ c | c | c }
+			\hline
+			Min-Heap $\mathcal{H}$ & Result set $\mathcal{R}$ & Step  \\
+			\hline
+			$e_{root}$ & & (1)\\
+			$e_1$, $e_2$ & & (2) \\
+			$e_2$,$e_3$,$e_4$ & & (3) \\
+			$e_5$,$e_3$,$e_4$,$e_6$ & & (4)\\
+			$e_3$, $p_2$, $p_0$, $p_3$, $e_4$, $e_4$, $e_6$ & & (5)\\
+			$p_2$, $p_4$,$p_0$,$p_1$, $p_3$,$e_4$,$e_6$ & & (6) \\
+			$p_4$,$p_0$,$p_1$, $p_3$,$e_4$,$e_6$ & $\{p_2\}$ & (7) \\
+		    $p_1$,$p_0$, $p_3$,$e_4$,$e_6$ & $\{p_2,p_4\}$ & (8) \\
+		    $p_0$, $p_3$,$e_4$,$e_6$ & $\{p_2,p_4,p_1\}$ & (9) \\
+			$e_4$,$e_6$ & $\{p_2,p_4,p_1\}$ & (10) \\
+	     	$\emptyset$ & $\{p_2,p_4,p_1\}$ & (11) \\
+			\hline
+		\end{tabular}
+	\end{center}
+	\caption{Changes of Data Structures}\label{ds2}
+\end{table}
+
+
+\subsection{Authentication for kNN and kANN Queries}
+
+When users only provide their preferences on the spatial attribute, that is $w_{i}=\langle 1,0,\ldots,0\rangle$, the MUSQ can be considered as $k$-\emph{aggregated nearest neighbor} (\emph{k}ANN) queries. As a result, when dealing with dominance relationship between two objects, only the aggregate distances are compared. The single parameter comparison results in a single POI result that dominates all the remaining POIs. So $k$ rounds are needed to find $k$ aggregated nearest neighbors. The $VO$ construction follows the same process of the original queries.
+
+A $k$NN query returns $k$ POI objects that are nearest to the querying user. It can be considered as a special case of \emph{k}ANN when user set $\mathcal{U}$ contains only one member. Query processing remains the same, except the spatial attribute is directly represented by the distance between the querying user and the POI object.
+
+To authenticate the result, user also follows the process as: (1) compare the root digest; (2) examine the dominance/weighted-dominance relationship of $G_i$ and $VO_i$ ($1\leq i\leq k$, $G_i \in \mathcal{R}, $ $VO_i \in VO$); (3) verify that POIs in the higher ranked groups dominate/weighted-dominate those in the lower ranked ones.
+
+
+\section{Cost Models}
+
+We evaluate the performance of our proposed authentication schemes by three different metrics: 1. the query processing time, which burdens the server; 2. the VO size, which affects the communication overhead between the server and clients; 3. client verification time, which burdens exclusively the client. Assume the MR-tree is complete and let $f_l(f_n)$ be the average fanout of the leaf (internal) node and $|P|$ be the size of all data objects. The height of MR-tree can be computed as $g = 1+\lceil log_{f_n}(\dfrac{|P|}{f_l}) \rceil $. Table \ref{Symbol2} summarized all the parameters for evaluating the cost model of our schemes.
+
+Without loss of generality, here we assume that the $k$ query results of MUSQ locates in ${m}$ leaf nodes of the tree. The total query processing time $CQ$ can be described as:
+\begin{equation*}
+CQ = C_{NA}(mf_l + \sum\limits_{i=0}^{g-1}(f_n^i - \sum\limits_{j=0}^{i-1}PN(j)f_n^{i-j})
+\end{equation*}
+where $C_{NA}$ is the time of accessing a node and $PN(i)$ calculates the number of all pruned nodes in $i$-th depth of the tree by computing the total number of nodes at depth $i$, subtracted by the internal nodes that contains the $m$ leaf nodes where $k$ result point belongs to and the descendants of higher pruned nodes.
+
+\begin{equation*}
+PN(i) = f_n^i - \dfrac{m}{f_n^{g-i}} - \sum\limits_{j=0}^{i-1}PN(j)f_n^{i-j}
+\end{equation*}
+
+Note that for each level in the tree, all the descendants of higher pruned nodes will not be visited according to our query processing algorithm. Thus the total query processing time is calculated by using $C_{NA}$ multiply all visited nodes in the tree.
+
+Based on the analysis of three different VO parts in Section \ref{processing}, we summarize the VO size as:
+\begin{equation*}
+S_{vo} = S_s + S_U + mf_lS_p + \sum\limits_{i=0}^{g-1}PN(i)(S_H + S_M)
+\end{equation*}
+where $S_s$ means the size of root signature, $S_P$ represents the size of a single data objects, $S_H$ is the size of a hash digest and $S_M$ corresponds to the size of an MBR associated with an internal node.
+
+Finally, we estimate the verification time for the client, which is composed of the recomputing MR-tree and digest computation time, $C_H$ and the time of user checking dominance relationship between points $C_v$. During the verification phase, the client needs to reconstruct the MR-tree from the leaf nodes up to the root. Note all the digest of all pruned nodes is already returned by the LBS server, the client does not need to recompute them any more. The verification time of a user $C_{user}$ is:
+\begin{equation*}
+C_{user} = C_H(m+\sum\limits_{i=0}^{g-1}(f_i - PN(i)) + C_v
+\end{equation*}
+where $m+\sum\limits_{i=0}^{g-1}(f_i - PN(i))$ is the times that recomputing digest of the user and  $C_v$ is the time client examine the dominance relationship between query results and all pruned nodes.
+
+\begin{table}
+	\begin{center}\scriptsize
+		\begin{tabular}{c | c}
+			\hline
+			Symbol & Description \\
+			\hline
+			$C_s$ & Cost of \emph{sign} operation \\
+			$C_v$ & Cost of \emph{verify} operation \\
+			$C_H$ & Cost of \emph{hash} operation  \\
+			$C_m$ & Cost of \emph{multiply} operation \\
+			$C_{NA}$ & Cost of a random node access \\	
+			$C_s$ & Cost of dominance operation \\
+			$S_{s}$ & Size of a signature \\
+			$S_{H}$ & Size of a digest \\
+			$S_{M}$ & Size of an MBR \\
+			$S_{P}$ & Size of a data point  \\
+			$S_{U}$ & Size of user information \\
+			$|P|$ & Data cardinality \\
+			$d$   & Data dimensionality \\
+			$b$   & Block size  \\
+			$f_l$   & Fanout of leaf node  \\
+			$f_n$   & Fanout of internal node \\
+			$g$   & Height of the tree \\
+			\hline
+		\end{tabular}
+	\end{center}
+	\caption{Value Storage Table}\label{Symbol2}
+\end{table}
+
+\section{Experiment and Evaluations}\label{evaluation}
+
+%In this section, We evaluate our methods on a real dataset. 
+While no existing work can be directly compared with ours, the purpose of this section is to show the feasibility and the scalability of our scheme under MUSQs. The real dataset we use is Gowalla \cite{} dataset in Stanford Large Network Dataset Collection, which records 6,442,890 user checkins at 1,280,989 unique POIs. The non-spatial attribute values of these POIs are synthesized with a uniform distribution in the interval of $[0,1]$. The page size of MR-tree is set to 4K bytes. Digests are computed using the 160-bit SHA-1 algorithm and signatures are generated according to the RSA-1024 algorithm. %By default, we search the query result for each query.
+
+% We also generate SYN (synthetic uniform) datasets for the scalability experiments. 
+For performance evaluation, the experiments were performed on an Intel Core i5-3450 processor and 4GB RAM, running on Windows XP x64 SP3. The code of our experiments is written in Java and implemented in 64-bit OpenJDK 1.6. The metrics to measure are the query processing time (as the server CPU time), client verification time (as the user CPU time), and VO size (as the communication cost). 
+
+We vary the dataset cardinality with 10k, 80k, 100k, 800k and 1000k. In Fig. \ref{datasetcardinality} we plots the query processing time, user verification time and VO size. The query processing time, which includes the time for both MUSQ result computation and VO construction, grows with the dataset cardinality increasing. Nonetheless, even when the cardinality reaches 1.0 million, the query processing can finish within 5.0 seconds. A similar trend is observed in the VO size and the user verification time which is composed of the time for computing the digest of MR-tree node, reconstructing MR-tree and examining the dominance/weighted dominance relationship among MR-tree nodes. For small and medium-sized data cardinality (e.g, less than 100,000), the user verification time is less than 5 seconds and VO size is less than 3.9 MB. Nonetheless, for very large queries (e.g, data cardinality of 1,000,000), the user verification can finish within 10 seconds and the total transmitted data are less than 40MB. A large dataset reduces MUSQ performance due to more results and a larger VO. Further, more comparisons of dominance and weighted-dominance overload the computing pressure of both the server and the user.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/DataSetCardinality.jpg}
+	\caption{Elapsed Time with Different Data Cardinality}\label{datasetcardinality}
+\end{figure}
+
+In Fig. \ref{UserSetSize}, we evaluate the query processing time, user verification time and VO size as the user set size increases. We observe that the query processing time only double from 2,000 ms to 4,000 ms with the user set size increasing 5 times (from 3 to 15). The user verification time increases sharply with the user set size grows. This is because a large user set size leads to a high computational cost of $ad_{sum}$, $\diamondsuit(p)$ and $v_{sum}(p)$ of POIs, which therefore overburdens the query processing time and user verification time. We can also observe that VO size stays stable around 4.88MB with the user set size varying. In MUSQ scenarios, the size of VO includes the size of POI objects, the MBRs along with their digests and all users' query information $\mathcal{U}$ and $\mathcal{W}$. Only $\mathcal{U}$ and $\mathcal{W}$ is determined by the user set size, which is only a small proportion of VO size. In our scheme, VO size is barely dependent on the change of user set size. Therefore, the communication cost of our scheme is scalable to large group of user set. 
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/UserSetSize.jpg}
+	\caption{Elapsed Time with Different User Set size}\label{UserSetSize}
+\end{figure}
+
+In Fig. \ref{nonspatial}, we vary the dimensionality of non-spatial attributes of POIs in MUSQ and plot the performance results of the query processing time, user verification time and VO size. We can observe the non-spatial dimensionality influences little on the query processing time and user verification time. This is because MUSQ result size stay stable with varying non-spatial dimensionality.
+The MUSQ processing and user verification are mainly based on the comparison of the dominance/weighted-dominance relationship. Despite MUSQ results increase with the non-spatial dimensionality increases, the further step, weighted-dominance computation results only depends on both the $ad_{sum}$ (the spatial attribute) and $\diamondsuit(p)$ (the weighted sum of all non-spatial attribute values of POIs). Thus, the performance of MUSQ processing cannot be influenced by the non-spatial dimensionality. The VO size grows by a small margin when the non-spatial dimensionality increases 4 times. This is because the POIs and MBRs in the VO include their non-spatial information. However, compared to other spatial query processing methods like \cite{lin2011authentication, lin2014authenticating}, whose query size and performance soar as non-spatial dimensionality increases, our MUSQ method outperforms and is not dependent on the non-spatial dimensionality. 
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=3.0in]{figure/nonspatialdimensionality.jpg}
+	\caption{Elapsed Time with Different Non-spatial Dimensionality }\label{nonspatial}
+\end{figure}
+
+
+\section{Conclusion}\label{conclusion}
+
+In this paper, we have studied the problem of authenticated multiple user-defined spatial queries (MUSQ). Our scheme enables the query processing to generate results and proofs that to check each result is sound, correct and complete. Through theoretical proof and performance evaluation, it shows that our framework is not only feasible, but also efficient and robust under various parameter settings. We believe this work steps towards practical applications of authenticated multiple users query processing on spatial datasets. 
+
+
+\section{Acknowledgment}
+
+We thank the anonymous reviewers for their helpful comments. This work was supported by Joint Fund of the National Natural Science Foundation of China and the China Academy of Engineering Physics; (Grant No. U1230106) and by the National Information Security 242 Project of China (Grant No. 2013A050).
+
+
+\bibliographystyle{abbrv}
+\bibliography{references}
+
+
+\end{document}
